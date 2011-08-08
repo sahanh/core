@@ -144,6 +144,7 @@ Autoloader::add_classes(array(
 	'Fuel\\Core\\Inflector'  => COREPATH.'classes/inflector.php',
 	'Fuel\\Core\\Input'      => COREPATH.'classes/input.php',
 	'Fuel\\Core\\Lang'       => COREPATH.'classes/lang.php',
+	'Fuel\\Core\\Loader'     => COREPATH.'classes/loader.php',
 	'Fuel\\Core\\Log'        => COREPATH.'classes/log.php',
 	'Fuel\\Core\\Migrate'    => COREPATH.'classes/migrate.php',
 	'Fuel\\Core\\Model'      => COREPATH.'classes/model.php',
