@@ -270,11 +270,11 @@ class Request {
 	public $controller_instance;
 
 	/**
-	 * Search paths for the current active request
+	 * File loaders for the current active request
 	 *
 	 * @var  array
 	 */
-	public $paths = array();
+	public $loaders = array();
 
 	/**
 	 * Request that created this one
@@ -482,23 +482,23 @@ class Request {
 	}
 
 	/**
-	 * Add to paths which are used by Fuel::find_file()
+	 * Add to loaders which are used by Fuel::find_file()
 	 *
-	 * @param   string  the new path
+	 * @param   string  the new loader
 	 * @param   bool    whether to add to the front or the back of the array
 	 * @return  void
 	 */
-	public function add_path($path, $prefix = false)
+	public function add_loader($loader, $prefix = false)
 	{
 		if ($prefix)
 		{
-			// prefix the path to the paths array
-			array_unshift($this->paths, $path);
+			// prefix the loader to the loaders array
+			array_unshift($this->loaders, $loader);
 		}
 		else
 		{
-			// add the new path
-			$this->paths[] = $path;
+			// add the new loader
+			$this->loaders[] = $loader;
 		}
 	}
 
@@ -509,7 +509,13 @@ class Request {
 	 */
 	public function get_paths()
 	{
-		return $this->paths;
+		$paths = array();
+		foreach ($this->loaders as $loader)
+		{
+			$paths[] = $loader->basepath;
+		}
+
+		return $paths;
 	}
 
 	/**

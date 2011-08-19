@@ -86,7 +86,7 @@ class Fuel {
 
 	public static $volatile_paths = array();
 
-	protected static $_paths = array();
+	protected static $_loaders = array();
 
 	protected static $packages = array();
 
@@ -139,7 +139,7 @@ class Fuel {
 		static::$encoding = \Config::get('encoding', static::$encoding);
 		static::$locale = \Config::get('locale', static::$locale);
 
-		static::$_paths = array(APPPATH, COREPATH);
+		static::$_loaders = array(\Autoloader::namespace_loader(''), \Autoloader::namespace_loader('Fuel\\Core'));
 
 		if ( ! static::$is_cli)
 		{
@@ -261,13 +261,13 @@ class Fuel {
 		// if not found, use the cascading filesystem to find the file
 		if (empty($cache_id))
 		{
-			$paths = static::$_paths;
+			$loaders = static::$_loaders;
 
 			// get extra information of the active request
 			if (class_exists('Request', false) and $active = \Request::active())
 			{
 				$cache_id = $active->uri->uri;
-				$paths = array_merge($active->paths, $paths);
+				$loaders = array_merge($active->loaders, $loaders);
 			}
 		}
 
@@ -322,17 +322,17 @@ class Fuel {
 	 */
 	public static function list_files($directory = null, $filter = '*.php')
 	{
-		$paths = static::$_paths;
+		$loaders = static::$_loaders;
 		// get the paths of the active request, and search them first
 		if (class_exists('Request', false) and $active = \Request::active())
 		{
-			$paths = array_merge($active->paths, $paths);
+			$loaders = array_merge($active->loaders, $loaders);
 		}
 
 		$found = array();
-		foreach ($paths as $path)
+		foreach ($loaders as $loader)
 		{
-			$found = array_merge(glob($path.$directory.'/'.$filter), $found);
+			$found = array_merge(glob($loader->basepath.$directory.'/'.$filter), $found);
 		}
 
 		return $found;
@@ -366,19 +366,19 @@ class Fuel {
 	 * @param  string  the new path
 	 * @param  bool    whether to add just behind the APPPATH or to prefix
 	 */
-	public static function add_path($path, $prefix = false)
+	public static function add_loader($loader, $prefix = false)
 	{
 		if ($prefix)
 		{
 			// prefix the path to the paths array
-			array_unshift(static::$_paths, $path);
+			array_unshift(static::$_loaders, $loader);
 		}
 		else
 		{
 			// find APPPATH index
-			$insert_at = array_search(APPPATH, static::$_paths) + 1;
+			$insert_at = array_search(\Autoloader::namespace_loader(''), static::$_loaders) + 1;
 			// insert new path just behind the APPPATH
-			array_splice(static::$_paths, $insert_at, 0, $path);
+			array_splice(static::$_loaders, $insert_at, 0, $path);
 		}
 	}
 
@@ -389,7 +389,12 @@ class Fuel {
 	 */
 	public static function get_paths()
 	{
-		return static::$_paths;
+		$paths = array();
+		foreach (static::$_loaders as $loader)
+		{
+			$paths[] = $loader->basepath;
+		}
+		return $paths;
 	}
 
 	/**
