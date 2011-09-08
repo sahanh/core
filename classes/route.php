@@ -32,38 +32,30 @@ class Route {
 
 	public $translation = null;
 
+	public $callable = null;
+
 	protected $search = null;
 
 	public function __construct($path, $translation = null)
 	{
-		if ($translation === null)
-		{
-			$this->path = $path;
-			$this->translation = $path;
-		}
-		else
-		{
-			$this->path = $path;
-			$this->translation = $translation;
-			$this->compile();
-		}
+		$this->path = $path;
+		$this->translation = ($translation === null) ? $path : $translation;
+		$this->search = ($translation == stripslashes($path)) ? $path : $this->compile();
 	}
 
 	protected function compile()
 	{
 		if ($this->path === '_root_')
 		{
-			$this->search = '';
+			return '';
 		}
-		else
-		{
-			$this->search = str_replace(array(':any', ':segment'), array('.+', '[^/]*'), $this->path);
-			$this->search = preg_replace('|:([a-z\_]+)|uD', '(?P<$1>.+?)', $this->search);
-		}
+
+		$search = str_replace(array(':any', ':segment'), array('.+', '[^/]*'), $this->path);
+		return preg_replace('|:([a-z\_]+)|uD', '(?P<$1>.+?)', $search);
 	}
 
 	/**
-	 * Attemptes to find the correct route for the given URI
+	 * Attempts to find the correct route for the given URI
 	 *
 	 * @access	public
 	 * @param	object	The URI object
@@ -97,13 +89,6 @@ class Route {
 	 */
 	public function matched($uri = '', $named_params = array())
 	{
-		$path = $this->translation;
-
-		if ($uri != '')
-		{
-			$path = preg_replace('@^'.$this->search.'$@uD', $this->translation, $uri);
-		}
-
 		// Clean out all the non-named stuff out of $named_params
 		foreach($named_params as $key => $val)
 		{
@@ -114,7 +99,22 @@ class Route {
 		}
 
 		$this->named_params = $named_params;
-		$this->segments = explode('/', trim($path, '/'));
+
+		if ($this->translation instanceof \Closure)
+		{
+			$this->callable = $this->translation;
+		}
+		else
+		{
+			$path = $this->translation;
+
+			if ($uri != '')
+			{
+				$path = preg_replace('#^'.$this->search.'$#uD', $this->translation, $uri);
+			}
+
+			$this->segments = explode('/', trim($path, '/'));
+		}
 
 		return $this;
 	}
@@ -153,7 +153,7 @@ class Route {
 			return false;
 		}
 
-		if (preg_match('@^'.$route->search.'$@uD', $uri, $params) != false)
+		if (preg_match('#^'.$route->search.'$#uD', $uri, $params) != false)
 		{
 			return $route->matched($uri, $params);
 		}

@@ -37,17 +37,28 @@ class File {
 	{
 		\Config::load('file', true);
 
-		static::$areas[null] = \File_Area::factory(\Config::get('file.base_config', array()));
+		static::$areas[null] = \File_Area::forge(\Config::get('file.base_config', array()));
 
 		foreach (\Config::get('file.areas', array()) as $name => $config)
 		{
-			static::$areas[$name] = \File_Area::factory($config);
+			static::$areas[$name] = \File_Area::forge($config);
 		}
 	}
 
+	/**
+	 * This method is deprecated...use forge() instead.
+	 *
+	 * @deprecated until 1.2
+	 */
 	public static function factory(array $config = array())
 	{
-		return \File_Area::factory($config);
+		logger(\Fuel::L_WARNING, 'This method is deprecated.  Please use a forge() instead.', __METHOD__);
+		return static::forge($config);
+	}
+
+	public static function forge(array $config = array())
+	{
+		return \File_Area::forge($config);
 	}
 
 	/**
@@ -127,10 +138,11 @@ class File {
 	 * @param   string|File_Area|null  file area name, object or null for non-specific
 	 * @return  bool
 	 */
-	public static function create_dir($basepath, $name, $chmod = 0777, $area = null)
+	public static function create_dir($basepath, $name, $chmod = null, $area = null)
 	{
 		$basepath	= rtrim(static::instance($area)->get_path($basepath), '\\/').DS;
 		$new_dir	= static::instance($area)->get_path($basepath.$name);
+		is_null($chmod) and $chmod = octdec(\Config::get('file.chmod.folders', 0777));
 
 		if ( ! is_dir($basepath) or ! is_writable($basepath))
 		{
@@ -249,12 +261,12 @@ class File {
 				// Use recursion when depth not depleted or not limited...
 				if ($depth < 1 or $new_depth > 0)
 				{
-					$dirs[$file] = static::read_dir($path.$file.DS, $new_depth, $filter, $area);
+					$dirs[$file.DS] = static::read_dir($path.$file.DS, $new_depth, $filter, $area);
 				}
 				// ... or set dir to false when not read
 				else
 				{
-					$dirs[$file] = false;
+					$dirs[$file.DS] = false;
 				}
 			}
 			else
@@ -475,8 +487,8 @@ class File {
 		{
 			if (is_array($file))
 			{
-				$check = static::create_dir($new_path.DS, $dir, fileperms($path.$dir.DS) ?: 0777, $area);
-				$check and static::copy_dir($path.$dir.DS, $new_path.$dir.DS, $area);
+				$check = static::create_dir($new_path.DS, substr($dir, 0, -1), fileperms($path.$dir) ?: 0777, $area);
+				$check and static::copy_dir($path.$dir.DS, $new_path.$dir, $area);
 			}
 			else
 			{

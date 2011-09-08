@@ -52,6 +52,20 @@ abstract class Controller_Rest extends \Controller {
 
 		// Which format should the data be returned in?
 		$this->request->lang = $this->_detect_lang();
+		
+		$this->response = \Response::forge();
+	}
+
+	public function after($response)
+	{
+		// If the response is a Response object, we will use their instead of
+		// ours.
+		if ( ! $response instanceof \Response)
+		{
+			$response = $this->response;
+		}
+
+		return parent::after($response);
 	}
 
 	/**
@@ -101,12 +115,12 @@ abstract class Controller_Rest extends \Controller {
 	 *
 	 * Takes pure data and optionally a status code, then creates the response
 	 *
-	 * @param  array
+	 * @param  mixed
 	 * @param  int
 	 */
 	protected function response($data = array(), $http_code = 200)
 	{
-		if (empty($data))
+		if ((is_array($data) and empty($data)) or ($data == ''))
 		{
 			$this->response->status = 404;
 			return;
@@ -120,7 +134,7 @@ abstract class Controller_Rest extends \Controller {
 			// Set the correct format header
 			$this->response->set_header('Content-Type', $this->_supported_formats[$this->format]);
 
-			$this->response->body(Format::factory($data)->{'to_'.$this->format}());
+			$this->response->body(Format::forge($data)->{'to_'.$this->format}());
 		}
 
 		// Format not supported, output directly
@@ -209,7 +223,7 @@ abstract class Controller_Rest extends \Controller {
 			$langs = explode(',', $lang);
 
 			$return_langs = array();
-			$i = 1;
+			
 			foreach ($langs as $lang)
 			{
 				// Remove weight and strip space

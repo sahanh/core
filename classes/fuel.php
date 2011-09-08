@@ -12,6 +12,8 @@
 
 namespace Fuel\Core;
 
+class Fuel_Exception extends \Exception {}
+
 /**
  * The core of the framework.
  *
@@ -20,6 +22,11 @@ namespace Fuel\Core;
  * @category	Core
  */
 class Fuel {
+
+	/**
+	 * @var  string  The version of Fuel
+	 */
+	const VERSION = '1.1-dev';
 
 	/**
 	 * @var  string  constant used for when in testing mode
@@ -41,19 +48,49 @@ class Fuel {
 	 */
 	const STAGE = 'stage';
 
+	/**
+	 * @var  int  No logging
+	 */
 	const L_NONE = 0;
+
+	/**
+	 * @var  int  Log errors only
+	 */
 	const L_ERROR = 1;
+
+	/**
+	 * @var  int  Log warning massages and below
+	 */
 	const L_WARNING = 2;
+
+	/**
+	 * @var  int  Log debug massages and below
+	 */
 	const L_DEBUG = 3;
+
+	/**
+	 * @var  int  Log info massages and below
+	 */
 	const L_INFO = 4;
+
+	/**
+	 * @var  int  Log everything
+	 */
 	const L_ALL = 5;
 
-	const VERSION = '1.0';
-
+	/**
+	 * @var  bool  Whether Fuel has been initialized
+	 */
 	public static $initialized = false;
 
+	/**
+	 * @var  string  The Fuel environment
+	 */
 	public static $env = \Fuel::DEVELOPMENT;
 
+	/**
+	 * @var  bool  Whether to display the profiling information
+	 */
 	public static $profiling = false;
 
 	public static $locale = 'en_US';
@@ -103,7 +140,7 @@ class Fuel {
 		}
 
 		// Start up output buffering
-		ob_start();
+		ob_start(\Config::get('ob_callback', null));
 
 		static::$profiling = \Config::get('profiling', false);
 
@@ -142,8 +179,6 @@ class Fuel {
 
 		// Run Input Filtering
 		\Security::clean_input();
-
-		static::$env = \Config::get('environment');
 
 		\Event::register('shutdown', 'Fuel::finish');
 
@@ -405,20 +440,8 @@ class Fuel {
 	 */
 	public static function add_package($package)
 	{
-		if ( ! is_array($package))
-		{
-			$package = array($package => PKGPATH.$package.DS);
-		}
-		foreach ($package as $name => $path)
-		{
-			if (array_key_exists($name, static::$packages))
-			{
-				continue;
-			}
-			static::add_path($path);
-			static::load($path.'bootstrap.php');
-			static::$packages[$name] = true;
-		}
+		logger(\Fuel::L_WARNING, 'This method is deprecated.  Please use a Package::load() instead.', __METHOD__);
+		\Package::load($package);
 	}
 
 	/**
@@ -429,7 +452,8 @@ class Fuel {
 	 */
 	public static function remove_package($name)
 	{
-		unset(static::$packages[$name]);
+		logger(\Fuel::L_WARNING, 'This method is deprecated.  Please use a Package::unload() instead.', __METHOD__);
+		\Package::unload($name);
 	}
 
 	/**
@@ -474,7 +498,7 @@ class Fuel {
 			// strip the classes directory, we need the module root
 			$path = substr($path, 0, -8);
 		}
-		
+
 		return $path;
 	}
 
@@ -552,10 +576,10 @@ class Fuel {
 		if ( ! is_dir($dir))
 		{
 			// Create the cache directory
-			mkdir($dir, 0777, true);
+			mkdir($dir, octdec(\Config::get('file.chmod.folders', 0777)), true);
 
 			// Set permissions (must be manually set to fix umask issues)
-			chmod($dir, 0777);
+			chmod($dir, octdec(\Config::get('file.chmod.folders', 0777)));
 		}
 
 		// Force the data to be a string
@@ -634,6 +658,19 @@ class Fuel {
 				\Lang::load((is_int($lang) ? $lang_group : $lang), (is_int($lang) ? true : $lang_group));
 			}
 		}
+	}
+
+	/**
+	 * Takes a value and checks if it is a Closure or not, if it is it
+	 * will return the result of the closure, if not, it will simply return the
+	 * value.
+	 *
+	 * @param   mixed  $var  The value to get
+	 * @return  mixed
+	 */
+	public static function value($var)
+	{
+		return ($var instanceof \Closure) ? $var() : $var;
 	}
 
 	/**

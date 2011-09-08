@@ -31,15 +31,26 @@ class Format {
 	protected $_data = array();
 
 	/**
+	 * This method is deprecated...use forge() instead.
+	 * 
+	 * @deprecated until 1.2
+	 */
+	public static function factory($data = null, $from_type = null)
+	{
+		logger(\Fuel::L_WARNING, 'This method is deprecated.  Please use a forge() instead.', __METHOD__);
+		return static::forge($data, $from_type);
+	}
+
+	/**
 	 * Returns an instance of the Format object.
 	 *
-	 *     echo Format::factory(array('foo' => 'bar'))->to_xml();
+	 *     echo Format::forge(array('foo' => 'bar'))->to_xml();
 	 *
 	 * @param   mixed  general date to be converted
 	 * @param   string  data format the file was provided in
 	 * @return  Factory
 	 */
-	public static function factory($data = null, $from_type = null)
+	public static function forge($data = null, $from_type = null)
 	{
 		return new static($data, $from_type);
 	}
@@ -84,6 +95,11 @@ class Format {
 		}
 
 		$array = array();
+
+		if (is_object ( $data))
+		{
+			$data = get_object_vars($data);
+		}
 
 		foreach ($data as $key => $value)
 		{

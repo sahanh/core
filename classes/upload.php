@@ -231,9 +231,6 @@ class Upload {
 		// processed files array
 		static::$files = $files = array();
 
-		// assume the uploads are valid
-		static::$valid = true;
-
 		// normalize the $_FILES array
 		foreach($_FILES as $name => $value)
 		{
@@ -243,11 +240,6 @@ class Upload {
 				$keys = array_keys($value['name']);
 				foreach ($keys as $key)
 				{
-					// skip this entry if no file was uploaded
-					if ($value['error'][$key] == static::UPLOAD_ERR_NO_FILE)
-					{
-						continue;
-					}
 					// store the file data
 					$file = array('field' => $name, 'key' => $key);
 					$file['name'] = $value['name'][$key];
@@ -260,11 +252,6 @@ class Upload {
 			}
 			else
 			{
-				// skip this entry if no file was uploaded
-				if ($value['error'] == static::UPLOAD_ERR_NO_FILE)
-				{
-					continue;
-				}
 				// store the file data
 				$file = array('field' => $name, 'key' => false, 'file' => $value['tmp_name']);
 				unset($value['tmp_name']);
@@ -313,11 +300,11 @@ class Upload {
 			// check the file extension black- and whitelists
 			if ($files[$key]['error'] == UPLOAD_ERR_OK)
 			{
-				if (in_array($files[$key]['extension'], (array) static::$config['ext_blacklist']))
+				if (in_array(strtolower($files[$key]['extension']), (array) static::$config['ext_blacklist']))
 				{
 					$files[$key]['error'] = static::UPLOAD_ERR_EXT_BLACKLISTED;
 				}
-				elseif ( ! empty(static::$config['ext_whitelist']) and ! in_array($files[$key]['extension'], (array) static::$config['ext_whitelist']))
+				elseif ( ! empty(static::$config['ext_whitelist']) and ! in_array(strtolower($files[$key]['extension']), (array) static::$config['ext_whitelist']))
 				{
 					$files[$key]['error'] = static::UPLOAD_ERR_EXT_NOT_WHITELISTED;
 				}
@@ -372,12 +359,21 @@ class Upload {
 				}
 			}
 
-			// set the valid flag to false when there was an error detected
-			static::$valid and static::$valid = ($files[$key]['error'] === 0);
-
 			// and add the message text
-			static::$files[$key]['message'] = \Lang::line('upload.'.static::$files[$key]['error']);
+			static::$files[$key]['message'] = \Lang::get('upload.'.static::$files[$key]['error']);
 		}
+
+		// determine the validate status
+		$valid = true;
+		foreach(static::$files as $key => $value)
+		{
+			if ($value['error'] !== 0)
+			{
+				$valid = false;
+				break;
+			}
+		}
+		static::$valid = $valid;
 	}
 
 	// ---------------------------------------------------------------------------
@@ -441,6 +437,12 @@ class Upload {
 			throw new \Fuel_Exception('No uploaded files are selected.');
 		}
 
+		// supplied new name and not auto renaming?
+		if (array_key_exists('new_name', static::$config) and ! static::$config['auto_rename'] and count($files) > 1)
+		{
+			throw new \Fuel_Exception('Can\'t rename multiple files without auto renaming.');
+		}
+
 		// make sure we have a valid path
 		$path = rtrim($path, DS).DS;
 		if ( ! is_dir($path) and (bool) static::$config['create_path'])
@@ -449,13 +451,16 @@ class Upload {
 			@mkdir($path, static::$config['path_chmod'], true);
 			umask($oldumask);
 		}
+
 		if ( ! is_dir($path))
 		{
 			throw new \Fuel_Exception('Can\'t move the uploaded file. Destination path specified does not exist.');
 		}
 
-		// now that we have a path, let's save the files
+		// save the old umask
 		$oldumask = umask(0);
+
+		// now that we have a path, let's save the files
 		foreach($files as $key => $file)
 		{
 			// skip all files in error
@@ -477,6 +482,8 @@ class Upload {
 					$filename = \Inflector::friendly_title($filename, '_');
 				}
 			}
+
+			array_key_exists('new_name', static::$config) and $filename = (string) static::$config['new_name'];
 
 			// array with the final filename
 			$save_as = array(
@@ -567,9 +574,7 @@ class Upload {
 					// recheck the saved_to path, it might have been altered
 					if ( ! is_dir(static::$files[$key]['saved_to']) and (bool) static::$config['create_path'])
 					{
-						$oldumask = umask(0);
 						@mkdir(static::$files[$key]['saved_to'], static::$config['path_chmod'], true);
-						umask($oldumask);
 					}
 					if ( ! is_dir(static::$files[$key]['saved_to']))
 					{
@@ -609,6 +614,14 @@ class Upload {
 				}
 			}
 		}
+
+		// update any error messages that occured while saving
+		foreach(static::$files as $key => $file)
+		{
+			static::$files[$key]['message'] = \Lang::get('upload.'.static::$files[$key]['error']);
+		}
+
+		// reset the umask
 		umask($oldumask);
 	}
 

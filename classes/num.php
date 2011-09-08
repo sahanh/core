@@ -54,7 +54,7 @@ class Num {
 		\Lang::load('byte_units', true);
 
 		static::$config     = \Config::load('num', true);
-		static::$byte_units = \Lang::line('byte_units');
+		static::$byte_units = \Lang::get('byte_units');
 	}
 
 	/**
@@ -154,40 +154,28 @@ class Num {
 	 * @param   integer
 	 * @return  string
 	 */
-	public static function quantity($num = null, $decimals = 0)
+	public static function quantity($num, $decimals = 0)
 	{
-		if($num)
+		if ($num >= 1000 && $num < 1000000)
 		{
-			switch(true)
-			{
-				case ($num >= 1000 && $num < 1000000):
-				{
-					return sprintf('%01.'.$decimals.'f', (sprintf('%01.0.f', $num) / 1000)).'K';
-				}
-				break;
-				case ($num >= 1000000 && $num < 1000000000):
-				{
-					return sprintf('%01.'.$decimals.'f', (sprintf('%01.0.f', $num) / 1000000)).'M';
-				}
-				break;
-				case ($num >= 1000000000):
-				{
-					return sprintf('%01.'.$decimals.'f', (sprintf('%01.0.f', $num) / 1000000000)).'B';
-				}
-				break;
-				default:
-				{
-					return $num;
-				}
-			}
+			return sprintf('%01.'.$decimals.'f', (sprintf('%01.0f', $num) / 1000)).'K';
 		}
+		elseif ($num >= 1000000 && $num < 1000000000)
+		{
+			return sprintf('%01.'.$decimals.'f', (sprintf('%01.0f', $num) / 1000000)).'M';
+		}
+		elseif ($num >= 1000000000)
+		{
+			return sprintf('%01.'.$decimals.'f', (sprintf('%01.0f', $num) / 1000000000)).'B';
+		}
+
 		return $num;
 	}
 
 	/**
 	 * Formats a number by injecting non-numeric characters in a specified
 	 * format into the string in the positions they appear in the format.
-	 * 
+	 *
 	 * Usage:
 	 * <code>
 	 * echo Num::format('1234567890', '(000) 000-0000'); // (123) 456-7890
@@ -205,11 +193,11 @@ class Num {
 		{
 			return $string;
 		}
-		
+
 		$result = '';
 		$fpos = 0;
 		$spos = 0;
-		
+
 		while ((strlen($format) - 1) >= $fpos)
 		{
 			if (ctype_alnum(substr($format, $fpos, 1)))
@@ -239,7 +227,7 @@ class Num {
 	 * echo Num::mask_string('1234567812345678', '**** **** **** 0000'); // **** **** **** 5678
 	 * echo Num::mask_string('1234567812345678', '**** - **** - **** - 0000', ' -'); // **** - **** - **** - 5678
 	 * </code>
-	 * 
+	 *
 	 * @link    http://snippets.symfony-project.org/snippet/157
 	 * @param   string     the string to transform
 	 * @param   string     the mask format

@@ -77,9 +77,9 @@ class Security {
 	/**
 	 * Generic variable clean method
 	 */
-	public static function clean($var, $filters = null)
+	public static function clean($var, $filters = null, $type = 'security.input_filter')
 	{
-		is_null($filters) and $filters = \Config::get('security.input_filter', array());
+		is_null($filters) and $filters = \Config::get($type, array());
 		$filters = is_array($filters) ? $filters : array($filters);
 
 		foreach ($filters as $filter)
@@ -176,20 +176,20 @@ class Security {
 		{
 			$value = htmlentities($value, ENT_COMPAT, \Fuel::$encoding, false);
 		}
-		elseif (is_array($value) || $value instanceof \Iterator)
+		elseif (is_array($value) || $value instanceof \Iterator || get_class($value) == 'stdClass')
 		{
+			// Add to $already_cleaned variable when object
+			is_object($value) and $already_cleaned[] = $value;
+
 			foreach ($value as $k => $v)
 			{
 				$value[$k] = static::htmlentities($v);
 			}
-
-			// Add to $already_cleaned variable when object
-			is_object($value) and $already_cleaned[] = $value;
 		}
 		elseif (is_object($value))
 		{
 			// Check if the object is whitelisted and return when that's the case
-			foreach (\Config::get('security.whitelisted_classes') as $class)
+			foreach (\Config::get('security.whitelisted_classes', array()) as $class)
 			{
 				if (is_a($value, $class))
 				{

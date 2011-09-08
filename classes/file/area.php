@@ -58,12 +58,23 @@ class File_Area {
 	}
 
 	/**
+	 * This method is deprecated...use forge() instead.
+	 *
+	 * @deprecated until 1.2
+	 */
+	public static function factory(array $config = array())
+	{
+		logger(\Fuel::L_WARNING, 'This method is deprecated.  Please use a forge() instead.', __METHOD__);
+		return static::forge($config);
+	}
+
+	/**
 	 * Factory for area objects
 	 *
 	 * @param	array
 	 * @return	File_Area
 	 */
-	public static function factory(array $config = array())
+	public static function forge(array $config = array())
 	{
 		return new static($config);
 	}
@@ -95,14 +106,14 @@ class File_Area {
 			if (array_key_exists($info['extension'], $this->file_handlers))
 			{
 				$class = '\\'.ltrim($this->file_handlers[$info['extension']], '\\');
-				return $class::factory($path, $config, $this);
+				return $class::forge($path, $config, $this);
 			}
 
-			return \File_Handler_File::factory($path, $config, $this);
+			return \File_Handler_File::forge($path, $config, $this);
 		}
 		elseif (is_dir($path))
 		{
-			return \File_Handler_Directory::factory($path, $config, $this, $content);
+			return \File_Handler_Directory::forge($path, $config, $this, $content);
 		}
 
 		// still here? path is invalid
@@ -202,7 +213,7 @@ class File_Area {
 		return \File::create($basepath, $name, $contents, $this);
 	}
 
-	public function create_dir($basepath, $name, $chmod = 0777)
+	public function create_dir($basepath, $name, $chmod = null)
 	{
 		return \File::create_dir($basepath, $name, $chmod, $this);
 	}

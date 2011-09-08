@@ -143,6 +143,7 @@ class Error {
 			{
 				ob_end_clean();
 			}
+			ob_start(\Config::get('ob_callback', null));
 		}
 		else
 		{
@@ -157,23 +158,27 @@ class Error {
 
 		if ($fatal)
 		{
+			if ( ! headers_sent())
+			{
+				$protocol = \Input::server('SERVER_PROTOCOL') ? \Input::server('SERVER_PROTOCOL') : 'HTTP/1.1';
+				header($protocol.' 500 Internal Server Error');
+			}
+
 			$data['non_fatal'] = static::$non_fatal_cache;
 
 			try
 			{
-				exit(\View::factory('errors'.DS.'php_fatal_error', $data, false));
+				exit(\View::forge('errors'.DS.'php_fatal_error', $data, false));
 			}
-			catch (\Fuel_Exception $e)
+			catch (\Fuel_Exception $view_exception)
 			{
-				echo $e->getMessage();
-				Debug::dump($data);
-				exit();
+				exit($data['severity'].' - '.$data['message'].' in '.\Fuel::clean_path($data['filepath']).' on line '.$data['error_line']);
 			}
 		}
 
 		try
 		{
-			echo \View::factory('errors'.DS.'php_error', $data, false);
+			echo \View::forge('errors'.DS.'php_error', $data, false);
 		}
 		catch (\Fuel_Exception $e)
 		{
@@ -205,7 +210,7 @@ class Error {
 		$data['line']		= $trace['line'];
 		$data['function']	= $trace['function'];
 
-		echo \View::factory('errors'.DS.'php_short', $data, false);
+		echo \View::forge('errors'.DS.'php_short', $data, false);
 	}
 
 	/**
@@ -216,7 +221,12 @@ class Error {
 	 */
 	public static function show_production_error(\Exception $e)
 	{
-		exit(\View::factory('errors'.DS.'production'));
+		if ( ! headers_sent())
+		{
+			$protocol = \Input::server('SERVER_PROTOCOL') ? \Input::server('SERVER_PROTOCOL') : 'HTTP/1.1';
+			header($protocol.' 500 Internal Server Error');
+		}
+		exit(\View::forge('errors'.DS.'production'));
 	}
 
 	protected static function prepare_exception(\Exception $e, $fatal = true)

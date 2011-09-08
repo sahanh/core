@@ -120,15 +120,11 @@ class Event {
 	 */
 	public static function shutdown()
 	{
-		if ( ! static::has_events('shutdown'))
+		if ( static::has_events('shutdown'))
 		{
-			return;
+			// trigger the shutdown events
+			static::trigger('shutdown', '', 'none');
 		}
-		// shutdown events have to be executed in reverse order
-		static::$_events['shutdown'] = array_reverse(static::$_events['shutdown']);
-
-		// trigger the shutdown events
-		static::trigger('shutdown');
 	}
 
 	// --------------------------------------------------------------------
@@ -146,9 +142,9 @@ class Event {
 	{
 		if (isset(static::$_events[$event]) AND count(static::$_events[$event]) > 0)
 		{
-			return TRUE;
+			return true;
 		}
-		return FALSE;
+		return false;
 	}
 
 	// --------------------------------------------------------------------
@@ -191,7 +187,7 @@ class Event {
 				break;
 		}
 
-		return FALSE;
+		return false;
 	}
 }
 

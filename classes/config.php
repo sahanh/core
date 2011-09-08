@@ -18,7 +18,7 @@ class Config {
 
 	public static $items = array();
 
-	public static function load($file, $group = null, $reload = false)
+	public static function load($file, $group = null, $reload = false, $overwrite = false)
 	{
 		if ( ! is_array($file) && array_key_exists($file, static::$loaded_files) and ! $reload)
 		{
@@ -37,13 +37,13 @@ class Config {
 			$paths = array_reverse($paths);
 			foreach ($paths as $path)
 			{
-				$config = array_merge($config, \Fuel::load($path));
+				$config = $overwrite ? array_merge($config, \Fuel::load($path)) : \Arr::merge($config, \Fuel::load($path));
 			}
 		}
 
 		if ($group === null)
 		{
-			static::$items = $reload ? $config : static::$items + $config;
+			static::$items = $reload ? $config : ($overwrite ? array_merge(static::$items, $config) : \Arr::merge(static::$items, $config));
 		}
 		else
 		{
@@ -52,7 +52,7 @@ class Config {
 			{
 				static::$items[$group] = array();
 			}
-			static::$items[$group] = array_merge(static::$items[$group],$config);
+			static::$items[$group] = $overwrite ? array_merge(static::$items[$group],$config) : \Arr::merge(static::$items[$group],$config);
 		}
 
 		if ( ! is_array($file))
@@ -124,116 +124,25 @@ CONF;
 
 		$path = pathinfo($path);
 
-		return File::update($path['dirname'], $path['basename'], $content);
+		return \File::update($path['dirname'], $path['basename'], $content);
 	}
 
 	public static function get($item, $default = null)
 	{
 		if (isset(static::$items[$item]))
 		{
-			$return = static::$items[$item];
+			return static::$items[$item];
 		}
-
-		if ( ! isset($return) and strpos($item, '.') !== false)
-		{
-			$parts = explode('.', $item);
-
-			switch (count($parts))
-			{
-				case 2:
-					if (isset(static::$items[$parts[0]][$parts[1]]))
-					{
-						$return = static::$items[$parts[0]][$parts[1]];
-					}
-				break;
-
-				case 3:
-					if (isset(static::$items[$parts[0]][$parts[1]][$parts[2]]))
-					{
-						$return = static::$items[$parts[0]][$parts[1]][$parts[2]];
-					}
-				break;
-
-				case 4:
-					if (isset(static::$items[$parts[0]][$parts[1]][$parts[2]][$parts[3]]))
-					{
-						$return = static::$items[$parts[0]][$parts[1]][$parts[2]][$parts[3]];
-					}
-				break;
-
-				default:
-					$return = false;
-					foreach ($parts as $part)
-					{
-						if ($return === false and isset(static::$items[$part]))
-						{
-							$return = static::$items[$part];
-						}
-						elseif (isset($return[$part]))
-						{
-							$return = $return[$part];
-						}
-						else
-						{
-							return ($default instanceof \Closure) ? $default() : $default;
-						}
-					}
-				break;
-			}
-		}
-		if ( ! isset($return))
-		{
-			$return = $default;
-		}
-		return ($return instanceof \Closure) ? $return() : $return;
+		return \Fuel::value(\Arr::get(static::$items, $item, $default));
 	}
 
 	public static function set($item, $value)
 	{
-		$value = ($value instanceof \Closure) ? $value() : $value;
-		$parts = explode('.', $item);
+		return \Arr::set(static::$items, $item, \Fuel::value($value));
+	}
 
-		switch (count($parts))
-		{
-			case 1:
-				static::$items[$parts[0]] = $value;
-			break;
-
-			case 2:
-				static::$items[$parts[0]][$parts[1]] = $value;
-			break;
-
-			case 3:
-				static::$items[$parts[0]][$parts[1]][$parts[2]] = $value;
-			break;
-
-			case 4:
-				static::$items[$parts[0]][$parts[1]][$parts[2]][$parts[3]] = $value;
-			break;
-
-			default:
-				$item =& static::$items;
-				foreach ($parts as $part)
-				{
-					// if it's not an array it can't have a subvalue
-					if ( ! is_array($item))
-					{
-						return false;
-					}
-
-					// if the part didn't exist yet: add it
-					if ( ! isset($item[$part]))
-					{
-						$item[$part] = array();
-					}
-
-					$item =& $item[$part];
-				}
-				$item = $value;
-			break;
-		}
-		return true;
+	public static function delete($item)
+	{
+		return \Arr::delete(static::$items, $item);
 	}
 }
-
-
